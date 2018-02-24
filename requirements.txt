@@ -1,0 +1,8 @@
+# core
+Flask
+
+# For financial data
+pandas
+
+# Aplication server for both development and production
+gunicorn
