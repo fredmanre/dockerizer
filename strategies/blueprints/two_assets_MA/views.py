@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from dateutil import parser
 import pandas as pd
 
@@ -21,7 +21,7 @@ def reset_settings():
     bars = set()
     in_market = False
 
-@two_assets_MA('/macd', methods='POST')
+@two_assets_MA.route('/macd', methods=['POST'])
 def strategy():
     """
     Estrategia para indicar si comprar o vender en una determinada moneda
@@ -90,7 +90,7 @@ def strategy():
                                         'MAdif':[MAdif]
                                         },columns=['fecha', 'tend', 'MAdif'],
                                         index=[time1])
-            estrategia.to_csv('./static/MAdif.csv')
+            estrategia.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
             # print('Malong: \n', MAlong)
             print('último MAlong: ', MAlong[indice])
             # print('MAshort: \n', MAshort)
@@ -102,7 +102,7 @@ def strategy():
         return jsonify(body)
     else:
         # la estrategia con una moneda distinta al btc
-        estrategia_scv = pd.read_csv('./static/MAdif.csv')
+        estrategia_scv = pd.read_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
         fstrategy = parser.parse(estrategia_scv.iloc[0]['fecha'])  # fecha del MAdif
         tprices = parser.parse(prices.iloc[-1]['datetime'])  # fecha de la vela
         print(estrategia_scv)
@@ -120,8 +120,8 @@ def strategy():
                                         'tend': [advice],
                                         'type': [settings['type']],
                                         'candle': [lista] })
-            datastrategy.to_csv('./static/advice.csv')
-            read_datastrategy = pd.read_csv('./static/advice.csv')
+            datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
+            read_datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
             json_datastrategy= read_datastrategy.to_json(orient='index')
             print("fecha del MAdif: ", fstrategy)
             print("fecha coincidente: ", tprices)
@@ -129,7 +129,7 @@ def strategy():
             print(json_datastrategy)
             # prueba que muestra un body de un dataframe de la estrategia
             #body = json_datastrategy
-            #return jsonify(body)
+            return jsonify(body)
 
         else:
             # advice = 'nothing'
