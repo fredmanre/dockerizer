@@ -1,4 +1,4 @@
-FROM python:3.4-slim
+FROM python:3.4
 LABEL maintainer="fredmanre <fredmanre@gmail.com>"
 
 ENV INSTALL_PATH /strategies
@@ -11,4 +11,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD gunicorn -b 0.0.0.0:5000 --access-logfile - "strategies.app:create_app()" 
+CMD gunicorn -b 0.0.0.0:5000 --access-logfile - "strategies.app:create_app()"
