@@ -132,8 +132,8 @@ def strategy():
             return jsonify(body)
 
         else:
-            # advice = 'nothing'
-            return jsonify(body)
+            pass
+            #return jsonify(body)
 
 
     # Bullish signal.
@@ -141,10 +141,10 @@ def strategy():
 
     # Updating response body.
     #body['trend'] = ''
-    #body['advice'] = advice
+    body['advice'] = advice
     # print(prices)
     # print(len(prices))
     #print(fstrategy)
     #print(tprices)
 
-    #return jsonify(body)
+    return jsonify(body)
