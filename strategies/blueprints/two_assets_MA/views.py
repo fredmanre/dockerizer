@@ -24,13 +24,12 @@ def reset_settings():
 @two_assets_MA.route('/macd', methods=['POST'])
 def strategy():
     """
-    Estrategia para indicar si comprar o vender en una determinada moneda
-    con respecto al un MA de BTC.
+    Strategy to indicate whether to buy or sell in a certain crypto.
 
-    :param settings: configuracion para los calculos
-    :param counter: evita la repeticion de data en el DaaFrame
-    :param candle: velas del activo a procesar
-    :param advice: indica comprar(long) o vender(short)
+    :param settings: settings for calculations
+    :param counter: avoid the repetition of data in the dataframe
+    :param candle: candles of the assets to be processed
+    :param advice: indicate buy(long) or sell(short)
     """
     global prices, bars, in_market
 
@@ -65,56 +64,56 @@ def strategy():
     # Strategy logic.
     if settings['type'] == 'btc':
         if settings['override']  == 'yes':
-            # calculo para el MAdif
+            # calculate for the MAdif
             malong = settings['longperiod']
             MAlong = prices['close'].rolling(malong).mean()
-            indice = len(MAlong) - 1
+            lenght = len(MAlong) - 1
             mashort = settings['shortperiod']
             MAshort = prices['close'].rolling(mashort).mean()
-            indice1 = len(MAshort) - 1
+            lenght1 = len(MAshort) - 1
             # MAdif
-            MAdif = (1 - (MAshort[indice1]/MAlong[indice]))*100
-            # ultima fecha
-            fecha = prices.iloc[-1]['datetime']
-            time1 = parser.parse(fecha)  # fecha parseada
-            # determina si es compra o venta
+            MAdif = (1 - (MAshort[lenght1]/MAlong[lenght]))*100
+            # last date
+            date = prices.iloc[-1]['datetime']
+            time1 = parser.parse(date)  # date parseada
+            # determines whether it is buying or selling
             if float(MAdif) > settings['percentage']:
                 a = 'long'
             else:
                 a = 'short'
-            # para la estrategia
-            nestrategia = {'fecha': fecha, 'tend': a, 'MAdif': MAdif, 'date': time1}
-            # se debe guardar en un archivo .scv indice, fecha, MAdif y a
-            estrategia = pd.DataFrame({'fecha': [fecha],
+            # for the strategy
+            # nstrategy = {'date': date, 'tend': a, 'MAdif': MAdif, 'date': time1}
+            # must be saved in a file advice.scv lenght, date, MAdif and a(advice)
+            strategy = pd.DataFrame({'date': [date],
                                         'tend':[a],
                                         'MAdif':[MAdif]
-                                        },columns=['fecha', 'tend', 'MAdif'],
+                                        },columns=['date', 'tend', 'MAdif'],
                                         index=[time1])
-            estrategia.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
+            strategy.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
             # print('Malong: \n', MAlong)
-            print('último MAlong: ', MAlong[indice])
+            print('último MAlong: ', MAlong[lenght])
             # print('MAshort: \n', MAshort)
-            print('último MAshort: ', MAshort[indice])
+            print('último MAshort: ', MAshort[lenght])
             print('MAdif: ', MAdif)
-            print('guardado en .csv: ', estrategia)
+            print('guardado en .csv: ', strategy)
         else:  # if override != 'yes'
             pass
-        return jsonify(body)
+        # return jsonify(body)
     else:
-        # la estrategia con una moneda distinta al btc
-        estrategia_scv = pd.read_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
-        fstrategy = parser.parse(estrategia_scv.iloc[0]['fecha'])  # fecha del MAdif
-        tprices = parser.parse(prices.iloc[-1]['datetime'])  # fecha de la vela
-        print(estrategia_scv)
-        # si existe una compra o venta de otra moneda igual a la estrategia
+        # the strategy with a currency other than btc
+        strategy_scv = pd.read_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
+        fstrategy = parser.parse(strategy_scv.iloc[0]['date'])  # date del MAdif
+        tprices = parser.parse(prices.iloc[-1]['datetime'])  # date de la vela
+        print(strategy_scv)
+        # if there is a purchase or sale of another currency equal to the strategy
         if fstrategy == tprices:
             lista = []
             for key, value in candle.items():
                 temp = [key, value]
                 lista.append(temp)
-            # el advice que retorna con la vela por la consola de gekko
-            advice = estrategia_scv.iloc[0]['tend']  # short/long
-            # datastrategy: madif, hora, tend, criptomoneda, candle
+            # the advice that return with candle for the gekko console
+            advice = strategy_scv.iloc[0]['tend']  # short/long
+            # datastrategy: madif, hour, tend, criptomoneda, candle
             datastrategy = pd.DataFrame({
                                         'hora': [fstrategy],
                                         'tend': [advice],
@@ -123,13 +122,13 @@ def strategy():
             datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
             read_datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
             json_datastrategy= read_datastrategy.to_json(orient='index')
-            print("fecha del MAdif: ", fstrategy)
-            print("fecha coincidente: ", tprices)
+            print("date of MAdif: ", fstrategy)
+            print("date coincidente: ", tprices)
             print(advice)
             print(json_datastrategy)
-            # prueba que muestra un body de un dataframe de la estrategia
-            #body = json_datastrategy
-            return jsonify(body)
+            # test that shows a body of a strategy dataframe
+            # body = json_datastrategy
+            # return jsonify(body)
 
         else:
             pass
