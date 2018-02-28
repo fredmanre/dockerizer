@@ -91,11 +91,11 @@ def strategy():
                                         index=[time1])
             strategy.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
             # print('Malong: \n', MAlong)
-            print('último MAlong: ', MAlong[lenght])
+            print('last MAlong: ', MAlong[lenght])
             # print('MAshort: \n', MAshort)
-            print('último MAshort: ', MAshort[lenght])
+            print('last MAshort: ', MAshort[lenght])
             print('MAdif: ', MAdif)
-            print('guardado en .csv: ', strategy)
+            print('saved in MAdif.csv: ', strategy)
         else:  # if override != 'yes'
             pass
         # return jsonify(body)
@@ -115,7 +115,7 @@ def strategy():
             advice = strategy_scv.iloc[0]['tend']  # short/long
             # datastrategy: madif, hour, tend, criptomoneda, candle
             datastrategy = pd.DataFrame({
-                                        'hora': [fstrategy],
+                                        'hour': [fstrategy],
                                         'tend': [advice],
                                         'type': [settings['type']],
                                         'candle': [lista] })
@@ -123,7 +123,7 @@ def strategy():
             read_datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
             json_datastrategy= read_datastrategy.to_json(orient='index')
             print("date of MAdif: ", fstrategy)
-            print("date coincidente: ", tprices)
+            print("coincident date: ", tprices)
             print(advice)
             print(json_datastrategy)
             # test that shows a body of a strategy dataframe
