@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from dateutil import parser
 import pandas as pd
+import math, os
 
 
 two_assets_MA = Blueprint('two_assets_MA', __name__)
@@ -8,18 +9,26 @@ two_assets_MA = Blueprint('two_assets_MA', __name__)
 # Global variables.
 prices = pd.DataFrame(columns=['open', 'high', 'low', 'close',
                                'vwp', 'volume', 'trades', 'datetime'])
+new = pd.DataFrame(columns=['date', 'tend', 'MAdif'])
+new_datastrategy = pd.DataFrame(columns=['tend'])
 
 bars = set()
 in_market = False
 
 
 def reset_settings():
-    global prices, bars, in_market
+    global prices, bars, in_market, new, new_datastrategy
 
     prices = pd.DataFrame(columns=['open', 'high', 'low', 'close',
                                    'vwp', 'volume', 'trades', 'datetime'])
+    new = pd.DataFrame(columns=['date', 'tend', 'MAdif'])
+    new_datastrategy = pd.DataFrame(columns=['tend'])
+    if os.path.exists('strategies/blueprints/two_assets_MA/static/advice.csv'):
+        os.remove('strategies/blueprints/two_assets_MA/static/advice.csv')
+
     bars = set()
     in_market = False
+
 
 @two_assets_MA.route('/macd', methods=['POST'])
 def strategy():
@@ -31,7 +40,7 @@ def strategy():
     :param candle: candles of the assets to be processed
     :param advice: indicate buy(long) or sell(short)
     """
-    global prices, bars, in_market
+    global prices, bars, in_market, new, new_datastrategy
 
     # Getting request data.
     body = request.get_json()
@@ -60,90 +69,98 @@ def strategy():
                               },
                              index = [time])
     prices = prices.append(new_price)
-
+    # print(prices)
     # Strategy logic.
-    if settings['type'] == 'btc':
-        if settings['override']  == 'yes':
-            # calculate for the MAdif
-            malong = settings['longperiod']
-            MAlong = prices['close'].rolling(malong).mean()
-            lenght = len(MAlong) - 1
-            mashort = settings['shortperiod']
-            MAshort = prices['close'].rolling(mashort).mean()
-            lenght1 = len(MAshort) - 1
-            # MAdif
-            MAdif = (1 - (MAshort[lenght1]/MAlong[lenght]))*100
-            # last date
-            date = prices.iloc[-1]['datetime']
-            time1 = parser.parse(date)  # date parseada
-            # determines whether it is buying or selling
-            if float(MAdif) > settings['percentage']:
+    if settings['signal'] == 'yes':
+        # calculate for the MAdif
+        malong = settings['long_period']
+        MAlong = prices['close'].rolling(malong).mean()
+        lenght = len(MAlong) - 1
+        mashort = settings['short_period']
+        MAshort = prices['close'].rolling(mashort).mean()
+        lenght1 = len(MAshort) - 1
+        # MAdif
+        MAdif = (1 - (MAshort[lenght1]/MAlong[lenght]))*100
+        # last date
+        date = prices.iloc[-1]['datetime']
+        time1 = parser.parse(date)  # date parsed
+        # determines whether it is buying or selling
+        entry_percentage = settings['entry_percentage']
+        exit_percentage = settings['exit_percentage']
+        if math.isnan(MAdif):
+            a = 'nothing'
+            pass
+        else:
+            if MAdif > entry_percentage and MAdif < exit_percentage:
+                a = 'nothing'
+            elif MAdif <= entry_percentage:
                 a = 'long'
-            else:
+            elif MAdif >= exit_percentage:
                 a = 'short'
-            # for the strategy
-            # nstrategy = {'date': date, 'tend': a, 'MAdif': MAdif, 'date': time1}
-            # must be saved in a file advice.scv lenght, date, MAdif and a(advice)
+        if a != 'nothing':
             strategy = pd.DataFrame({'date': [date],
                                         'tend':[a],
                                         'MAdif':[MAdif]
                                         },columns=['date', 'tend', 'MAdif'],
                                         index=[time1])
-            strategy.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
+            new = new.append(strategy)
+            print(new)
+            new.to_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv', mode='w+')
             # print('Malong: \n', MAlong)
             print('last MAlong: ', MAlong[lenght])
             # print('MAshort: \n', MAshort)
             print('last MAshort: ', MAshort[lenght])
             print('MAdif: ', MAdif)
             print('saved in MAdif.csv: ', strategy)
-        else:  # if override != 'yes'
-            pass
-        # return jsonify(body)
-    else:
-        # the strategy with a currency other than btc
-        strategy_scv = pd.read_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
-        fstrategy = parser.parse(strategy_scv.iloc[0]['date'])  # date del MAdif
-        tprices = parser.parse(prices.iloc[-1]['datetime'])  # date de la vela
-        print(strategy_scv)
-        # if there is a purchase or sale of another currency equal to the strategy
-        if fstrategy == tprices:
-            lista = []
-            for key, value in candle.items():
-                temp = [key, value]
-                lista.append(temp)
-            # the advice that return with candle for the gekko console
-            advice = strategy_scv.iloc[0]['tend']  # short/long
-            # datastrategy: madif, hour, tend, criptomoneda, candle
-            datastrategy = pd.DataFrame({
-                                        'hour': [fstrategy],
-                                        'tend': [advice],
-                                        'type': [settings['type']],
-                                        'candle': [lista] })
-            datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
-            read_datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
-            json_datastrategy= read_datastrategy.to_json(orient='index')
-            print("date of MAdif: ", fstrategy)
-            print("coincident date: ", tprices)
-            print(advice)
-            print(json_datastrategy)
-            # test that shows a body of a strategy dataframe
-            # body = json_datastrategy
-            # return jsonify(body)
-
         else:
             pass
-            #return jsonify(body)
+    else:
+        # the strategy with a currency other than btc
+        strategy_csv = pd.read_csv('strategies/blueprints/two_assets_MA/static/MAdif.csv')
+        fstrategy = set(strategy_csv.loc[:,'date'])  # MAdif date
+        tprices = str(prices.iloc[-1]['datetime'])  # date of candle
+        # if there is a purchase or sale of another currency equal to the strategy
+        if tprices in fstrategy:
+            # the advice that return with candle for the gekko console
+            row = strategy_csv[strategy_csv['date'] == tprices]
+            advice = row.iloc[0]['tend']  # short/long
+            # datastrategy: hour, tend, type
+            if os.path.exists('strategies/blueprints/two_assets_MA/static/advice.csv') \
+                and os.stat('strategies/blueprints/two_assets_MA/static/advice.csv').st_size > 0:
+                datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
+                if datastrategy.iloc[-1]['tend'] != advice:
+                    datastrategy = pd.DataFrame({
+                                                'tend': [advice],
+                                                }, index=[tprices])
+                    new_datastrategy = new_datastrategy.append(datastrategy)
+                    new_datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv', mode='w+')
+                    advice = advice
+                    print("date coincident: ", tprices)
+                    print(advice)
+                else:
+                    advice = {'long':False, 'short':False}
+            else:
+                if advice == 'short':
+                    advice = {'long':False, 'short':False}
+                else:
+                    datastrategy = pd.DataFrame({
+                                                    'tend': [advice],
+                                                    }, index=[tprices])
+                    new_datastrategy = new_datastrategy.append(datastrategy)
+                    new_datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv', mode='w+')
+                    advice = advice
+                    print("date coincident: ", tprices)
+                    print(advice)
+
+        else:
+            advice = {'long':False, 'short':False}
 
 
     # Bullish signal.
 
 
     # Updating response body.
-    #body['trend'] = ''
+    body['trend'] = ''
     body['advice'] = advice
-    # print(prices)
-    # print(len(prices))
-    #print(fstrategy)
-    #print(tprices)
 
     return jsonify(body)
