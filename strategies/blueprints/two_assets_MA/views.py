@@ -126,7 +126,7 @@ def strategy():
             advice = row.iloc[0]['tend']  # short/long
             # datastrategy: hour, tend, type
             if os.path.exists('strategies/blueprints/two_assets_MA/static/advice.csv') \
-                and os.stat('strategies/blueprints/two_assets_MA/static/advice.csv').st_size > 0:
+            and os.stat('strategies/blueprints/two_assets_MA/static/advice.csv').st_size > 0:
                 datastrategy = pd.read_csv('strategies/blueprints/two_assets_MA/static/advice.csv')
                 if datastrategy.iloc[-1]['tend'] != advice:
                     datastrategy = pd.DataFrame({
@@ -135,8 +135,6 @@ def strategy():
                     new_datastrategy = new_datastrategy.append(datastrategy)
                     new_datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv', mode='w+')
                     advice = advice
-                    print("date coincident: ", tprices)
-                    print(advice)
                 else:
                     advice = {'long':False, 'short':False}
             else:
@@ -149,9 +147,9 @@ def strategy():
                     new_datastrategy = new_datastrategy.append(datastrategy)
                     new_datastrategy.to_csv('strategies/blueprints/two_assets_MA/static/advice.csv', mode='w+')
                     advice = advice
-                    print("date coincident: ", tprices)
-                    print(advice)
 
+            print("date coincident: ", tprices)
+            print(advice)
         else:
             advice = {'long':False, 'short':False}
 
